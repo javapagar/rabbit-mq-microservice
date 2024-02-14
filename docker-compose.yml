@@ -1,0 +1,50 @@
+version: '3'
+
+services:
+  publisher:
+    build: ./app_publisher
+    restart: unless-stopped
+    environment:
+      - RABBITMQ_HOST=${RABBITMQ_HOST}
+      - RABBITMQ_PORT=${RABBITMQ_PORT}
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS}
+    depends_on:
+      consumer:
+        condition: service_healthy
+      # shared_rabbitmq:
+      #   condition: service_started
+  consumer:
+    build: ./app_consumer
+    depends_on:
+      shared_rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+    environment:
+      - RABBITMQ_HOST=${RABBITMQ_HOST}
+      - RABBITMQ_PORT=${RABBITMQ_PORT}
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS}
+    healthcheck:
+      test: "exit 0"
+      interval: 5s
+  shared_rabbitmq:
+    container_name: rabbitmq
+    image: 'rabbitmq:3.12-management'
+    restart: unless-stopped
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS}
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 10s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+      start_interval: 5s
+
+
+    
